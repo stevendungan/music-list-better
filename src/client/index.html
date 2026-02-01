@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music List</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Favorite Albums</h1>
+      <div class="controls">
+        <button id="add-btn" class="btn btn-primary">Add Album</button>
+        <div class="view-toggle">
+          <button id="view-rank" class="btn btn-small active">By Rank</button>
+          <button id="view-recent" class="btn btn-small">By Last Played</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <table id="favorites-table">
+        <thead>
+          <tr>
+            <th class="col-rank">Rank</th>
+            <th class="col-title">Album</th>
+            <th class="col-artist">Artist</th>
+            <th class="col-year">Year</th>
+            <th class="col-played">Last Played</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="favorites-body">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </main>
+  </div>
+
+  <!-- Modal for Add/Edit -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="modal-title">Add Album</h2>
+      <form id="album-form">
+        <input type="hidden" id="form-id">
+        <div class="form-group">
+          <label for="form-rank">Rank</label>
+          <input type="number" id="form-rank" min="1" required>
+        </div>
+        <div class="form-group">
+          <label for="form-title">Album Title</label>
+          <input type="text" id="form-title" required>
+        </div>
+        <div class="form-group">
+          <label for="form-artist">Artist</label>
+          <input type="text" id="form-artist" required>
+        </div>
+        <div class="form-group">
+          <label for="form-year">Year</label>
+          <input type="number" id="form-year" min="1900" max="2100">
+        </div>
+        <div class="form-group">
+          <label for="form-last-played">Last Played</label>
+          <input type="date" id="form-last-played">
+        </div>
+        <div class="form-actions">
+          <button type="button" id="cancel-btn" class="btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div id="delete-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Delete Album</h2>
+      <p id="delete-message">Are you sure you want to delete this album?</p>
+      <div class="form-actions">
+        <button id="delete-cancel" class="btn">Cancel</button>
+        <button id="delete-confirm" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
