@@ -120,7 +120,8 @@ export function deleteFavorite(id: number): boolean {
 }
 
 export function markPlayed(id: number): Favorite | undefined {
-  const today = new Date().toISOString().split('T')[0]
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   db.prepare('UPDATE favorites SET last_played = ? WHERE id = ?').run(today, id)
   return getFavoriteById(id)
 }

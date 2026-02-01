@@ -3,3 +3,6 @@ dist/
 data/*.db
 *.log
 .DS_Store
+.claude/
+.nimbalyst/
+nimbalyst-local/
