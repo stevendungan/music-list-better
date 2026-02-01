@@ -59,29 +59,50 @@ export function updateFavorite(id: number, data: { rank?: number; title?: string
   const current = getFavoriteById(id)
   if (!current) return undefined
 
-  // Handle rank change
+  // Handle rank change - use transaction to avoid UNIQUE constraint issues
   if (data.rank !== undefined && data.rank !== current.rank) {
-    if (data.rank < current.rank) {
-      // Moving up: shift albums in between down
-      db.prepare('UPDATE favorites SET rank = rank + 1 WHERE rank >= ? AND rank < ?').run(data.rank, current.rank)
-    } else {
-      // Moving down: shift albums in between up
-      db.prepare('UPDATE favorites SET rank = rank - 1 WHERE rank > ? AND rank <= ?').run(current.rank, data.rank)
-    }
-  }
+    const transaction = db.transaction(() => {
+      // First, temporarily move current album's rank out of the way
+      db.prepare('UPDATE favorites SET rank = -1 WHERE id = ?').run(id)
 
-  db.prepare(`
-    UPDATE favorites
-    SET rank = ?, title = ?, artist = ?, year = ?, last_played = ?
-    WHERE id = ?
-  `).run(
-    data.rank ?? current.rank,
-    data.title ?? current.title,
-    data.artist ?? current.artist,
-    data.year !== undefined ? data.year : current.year,
-    data.last_played !== undefined ? data.last_played : current.last_played,
-    id
-  )
+      if (data.rank < current.rank) {
+        // Moving up: shift albums in between down
+        db.prepare('UPDATE favorites SET rank = rank + 1 WHERE rank >= ? AND rank < ?').run(data.rank, current.rank)
+      } else {
+        // Moving down: shift albums in between up
+        db.prepare('UPDATE favorites SET rank = rank - 1 WHERE rank > ? AND rank <= ?').run(current.rank, data.rank)
+      }
+
+      // Now update the album with its new rank and other fields
+      db.prepare(`
+        UPDATE favorites
+        SET rank = ?, title = ?, artist = ?, year = ?, last_played = ?
+        WHERE id = ?
+      `).run(
+        data.rank,
+        data.title ?? current.title,
+        data.artist ?? current.artist,
+        data.year !== undefined ? data.year : current.year,
+        data.last_played !== undefined ? data.last_played : current.last_played,
+        id
+      )
+    })
+    transaction()
+  } else {
+    // No rank change, just update other fields
+    db.prepare(`
+      UPDATE favorites
+      SET rank = ?, title = ?, artist = ?, year = ?, last_played = ?
+      WHERE id = ?
+    `).run(
+      data.rank ?? current.rank,
+      data.title ?? current.title,
+      data.artist ?? current.artist,
+      data.year !== undefined ? data.year : current.year,
+      data.last_played !== undefined ? data.last_played : current.last_played,
+      id
+    )
+  }
 
   return getFavoriteById(id)
 }
