@@ -14,8 +14,12 @@ A personal music collection app for tracking ranked favorite albums.
 
 - Node.js 18+
 - npm
+- A C/C++ toolchain for compiling native modules (`better-sqlite3` uses `node-gyp`)
+  - **macOS**: Install Xcode Command Line Tools — `xcode-select --install`
+  - **Ubuntu/Debian**: `sudo apt install build-essential python3`
+  - **Windows**: Install Visual Studio Build Tools or run `npm install -g windows-build-tools`
 
-## How to Run
+## Getting Started
 
 ### 1. Install dependencies
 
@@ -23,25 +27,27 @@ A personal music collection app for tracking ranked favorite albums.
 npm install
 ```
 
-### 2. Migrate data from old app (one-time)
-
-If you have an existing database from the Flask music-list app:
-
-```bash
-npm run migrate
-```
-
-This reads from `../music-list/app.db` (read-only) and copies albums to `data/music.db`.
-
-### 3. Start development server
+### 2. Start development server
 
 ```bash
 npm run dev
 ```
 
-This starts both the API server (port 3000) and frontend dev server (port 5173).
+This starts both the API server (port 3000) and frontend dev server (port 5173) concurrently.
 
 Open http://localhost:5173 in your browser.
+
+The SQLite database (`data/music.db`) is created automatically on first run if it doesn't already exist.
+
+### Optional: Migrate data from old app
+
+If you have an existing database from the [music-list](https://github.com/stevendungan/music-list) Flask app at `../music-list/app.db`:
+
+```bash
+npm run migrate
+```
+
+This reads from the old database (read-only) and copies albums into `data/music.db`.
 
 ## Project Structure
 
