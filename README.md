@@ -39,16 +39,6 @@ Open http://localhost:5173 in your browser.
 
 The SQLite database (`data/music.db`) is created automatically on first run if it doesn't already exist.
 
-### Optional: Migrate data from old app
-
-If you have an existing database from the [music-list](https://github.com/stevendungan/music-list) Flask app at `../music-list/app.db`:
-
-```bash
-npm run migrate
-```
-
-This reads from the old database (read-only) and copies albums into `data/music.db`.
-
 ## Project Structure
 
 ```
@@ -56,7 +46,6 @@ music-list-better/
 ├── src/
 │   ├── client/     # Frontend (HTML, CSS, TypeScript)
 │   └── server/     # Backend API (Hono + SQLite)
-├── scripts/        # Migration script
 └── data/           # SQLite database
 ```
 
