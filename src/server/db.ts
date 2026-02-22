@@ -17,7 +17,7 @@ db.exec(`
     rank INTEGER UNIQUE NOT NULL,
     title TEXT NOT NULL,
     artist TEXT NOT NULL,
-    year INTEGER,
+    year INTEGER NOT NULL,
     last_played TEXT
   )
 `)
@@ -27,7 +27,7 @@ export interface Favorite {
   rank: number
   title: string
   artist: string
-  year: number | null
+  year: number
   last_played: string | null
 }
 
@@ -46,7 +46,7 @@ export function getFavoriteById(id: number): Favorite | undefined {
   return db.prepare('SELECT * FROM favorites WHERE id = ?').get(id) as Favorite | undefined
 }
 
-export function addFavorite(data: { rank: number; title: string; artist: string; year?: number; last_played?: string }): Favorite {
+export function addFavorite(data: { rank: number; title: string; artist: string; year: number; last_played?: string }): Favorite {
   const insertRank = data.rank
   const transaction = db.transaction(() => {
     // Move rows at or above insert position to temp range (avoids UNIQUE violation during shift)
@@ -55,7 +55,7 @@ export function addFavorite(data: { rank: number; title: string; artist: string;
     const result = db.prepare(`
       INSERT INTO favorites (rank, title, artist, year, last_played)
       VALUES (?, ?, ?, ?, ?)
-    `).run(insertRank, data.title, data.artist, data.year ?? null, data.last_played ?? null)
+    `).run(insertRank, data.title, data.artist, data.year, data.last_played ?? null)
     // Move temp rows back: rank 10003 -> 4, 10004 -> 5, etc. (rank - OFFSET + 1)
     db.prepare('UPDATE favorites SET rank = rank - ? WHERE rank > ?').run(RANK_OFFSET - 1, RANK_OFFSET)
     return result.lastInsertRowid as number

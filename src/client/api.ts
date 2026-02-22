@@ -3,7 +3,7 @@ export interface Favorite {
   rank: number
   title: string
   artist: string
-  year: number | null
+  year: number
   last_played: string | null
 }
 
@@ -29,7 +29,7 @@ export async function addFavorite(data: {
   rank: number
   title: string
   artist: string
-  year?: number
+  year: number
   last_played?: string
 }): Promise<Favorite> {
   const res = await fetch(`${API_BASE}/favorites`, {

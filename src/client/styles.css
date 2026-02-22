@@ -195,6 +195,22 @@ tr:hover {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
+.form-group input.invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+}
+
+.form-error {
+  display: block;
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.form-error.hidden {
+  display: none;
+}
+
 .form-actions {
   display: flex;
   gap: 10px;

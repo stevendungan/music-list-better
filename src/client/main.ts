@@ -26,6 +26,7 @@ const formRank = document.getElementById('form-rank') as HTMLInputElement
 const formTitle = document.getElementById('form-title') as HTMLInputElement
 const formArtist = document.getElementById('form-artist') as HTMLInputElement
 const formYear = document.getElementById('form-year') as HTMLInputElement
+const yearError = document.getElementById('year-error') as HTMLSpanElement
 const formLastPlayed = document.getElementById('form-last-played') as HTMLInputElement
 
 const deleteModal = document.getElementById('delete-modal') as HTMLDivElement
@@ -54,7 +55,7 @@ function renderFavorites(favorites: Favorite[]): void {
       <td class="drag-handle">${isDraggable ? '⋮⋮ ' : ''}${f.rank}</td>
       <td>${escapeHtml(f.title)}</td>
       <td>${escapeHtml(f.artist)}</td>
-      <td>${f.year ?? '-'}</td>
+      <td>${f.year}</td>
       <td>${formatDate(f.last_played)}</td>
       <td class="actions">
         <button class="btn btn-small played-btn" data-id="${f.id}">Played</button>
@@ -109,7 +110,7 @@ function openEditModal(favorite: Favorite): void {
   formRank.value = String(favorite.rank)
   formTitle.value = favorite.title
   formArtist.value = favorite.artist
-  formYear.value = favorite.year ? String(favorite.year) : ''
+  formYear.value = String(favorite.year)
   formLastPlayed.value = favorite.last_played ?? ''
 
   modal.classList.remove('hidden')
@@ -120,17 +121,47 @@ function openEditModal(favorite: Favorite): void {
 function closeModal(): void {
   modal.classList.add('hidden')
   albumForm.reset()
+  clearYearError()
+}
+
+// Year validation
+function validateYear(): boolean {
+  const value = formYear.value.trim()
+  if (!value) {
+    showYearError('Please enter a valid 4-digit year')
+    return false
+  }
+  const num = Number(value)
+  if (!Number.isInteger(num) || num < 1000 || num > 9999) {
+    showYearError('Please enter a valid 4-digit year')
+    return false
+  }
+  clearYearError()
+  return true
+}
+
+function showYearError(message: string): void {
+  yearError.textContent = message
+  yearError.classList.remove('hidden')
+  formYear.classList.add('invalid')
+}
+
+function clearYearError(): void {
+  yearError.classList.add('hidden')
+  formYear.classList.remove('invalid')
 }
 
 // Handle form submit
 async function handleFormSubmit(e: Event): Promise<void> {
   e.preventDefault()
 
+  if (!validateYear()) return
+
   const data = {
     rank: parseInt(formRank.value),
     title: formTitle.value.trim(),
     artist: formArtist.value.trim(),
-    year: formYear.value ? parseInt(formYear.value) : undefined,
+    year: parseInt(formYear.value),
     last_played: formLastPlayed.value || undefined
   }
 
@@ -225,7 +256,7 @@ async function exportToCsv(): Promise<void> {
     f.rank,
     escapeField(f.title),
     escapeField(f.artist),
-    f.year ?? '',
+    f.year,
     f.last_played ?? ''
   ].join(','))
 
@@ -321,6 +352,11 @@ favoritesBody.addEventListener('dragstart', handleDragStart)
 favoritesBody.addEventListener('dragover', handleDragOver)
 favoritesBody.addEventListener('dragend', handleDragEnd)
 favoritesBody.addEventListener('drop', handleDrop)
+formYear.addEventListener('input', clearYearError)
+formYear.addEventListener('invalid', (e) => {
+  e.preventDefault()
+  showYearError('Please enter a valid 4-digit year')
+})
 viewRankBtn.addEventListener('click', () => setView('rank'))
 viewRecentBtn.addEventListener('click', () => setView('recent'))
 deleteCancelBtn.addEventListener('click', closeDeleteModal)

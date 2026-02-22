@@ -59,7 +59,8 @@
         </div>
         <div class="form-group">
           <label for="form-year">Year</label>
-          <input type="number" id="form-year" min="1900" max="2100">
+          <input type="number" id="form-year" min="1000" max="9999" step="1" required>
+          <span class="form-error hidden" id="year-error">Please enter a valid 4-digit year</span>
         </div>
         <div class="form-group">
           <label for="form-last-played">Last Played</label>

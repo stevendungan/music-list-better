@@ -50,8 +50,12 @@ app.post('/api/favorites', async (c) => {
   const body = await c.req.json()
   const { rank, title, artist, year, last_played } = body
 
-  if (!rank || !title || !artist) {
-    return c.json({ error: 'rank, title, and artist are required' }, 400)
+  if (!rank || !title || !artist || year === undefined || year === null) {
+    return c.json({ error: 'rank, title, artist, and year are required' }, 400)
+  }
+
+  if (!Number.isInteger(year) || year < 1000 || year > 9999) {
+    return c.json({ error: 'year must be a 4-digit integer' }, 400)
   }
 
   const favorite = addFavorite({ rank, title, artist, year, last_played })
@@ -62,6 +66,12 @@ app.post('/api/favorites', async (c) => {
 app.put('/api/favorites/:id', async (c) => {
   const id = parseInt(c.req.param('id'))
   const body = await c.req.json()
+
+  if (body.year !== undefined) {
+    if (!Number.isInteger(body.year) || body.year < 1000 || body.year > 9999) {
+      return c.json({ error: 'year must be a 4-digit integer' }, 400)
+    }
+  }
 
   const favorite = updateFavorite(id, body)
   if (!favorite) {
