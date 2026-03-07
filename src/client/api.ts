@@ -5,6 +5,7 @@ export interface Favorite {
   artist: string
   year: number
   last_played: string | null
+  play_count: number
 }
 
 const API_BASE = '/api'
@@ -16,6 +17,11 @@ export async function getFavorites(): Promise<Favorite[]> {
 
 export async function getFavoritesRecent(): Promise<Favorite[]> {
   const res = await fetch(`${API_BASE}/favorites/recent`)
+  return res.json()
+}
+
+export async function getFavoritesMostPlayed(): Promise<Favorite[]> {
+  const res = await fetch(`${API_BASE}/favorites/most-played`)
   return res.json()
 }
 
@@ -31,6 +37,7 @@ export async function addFavorite(data: {
   artist: string
   year: number
   last_played?: string
+  play_count?: number
 }): Promise<Favorite> {
   const res = await fetch(`${API_BASE}/favorites`, {
     method: 'POST',

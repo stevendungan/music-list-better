@@ -125,6 +125,10 @@ tr:hover {
   width: 120px;
 }
 
+.col-plays {
+  width: 70px;
+}
+
 .col-actions {
   width: 180px;
 }
@@ -207,8 +211,15 @@ tr:hover {
   margin-top: 4px;
 }
 
-.form-error.hidden {
+.form-error.hidden, .form-warning.hidden {
   display: none;
+}
+
+.form-warning {
+  display: block;
+  color: #b45309;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 .form-actions {

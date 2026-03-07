@@ -16,6 +16,7 @@
         <div class="view-toggle">
           <button id="view-rank" class="btn btn-small active">By Rank</button>
           <button id="view-recent" class="btn btn-small">By Last Played</button>
+          <button id="view-most-played" class="btn btn-small">By Most Played</button>
         </div>
       </div>
     </header>
@@ -29,6 +30,7 @@
             <th class="col-artist">Artist</th>
             <th class="col-year">Year</th>
             <th class="col-played">Last Played</th>
+            <th class="col-plays">Plays</th>
             <th class="col-actions"></th>
           </tr>
         </thead>
@@ -65,6 +67,11 @@
         <div class="form-group">
           <label for="form-last-played">Last Played</label>
           <input type="date" id="form-last-played">
+        </div>
+        <div class="form-group">
+          <label for="form-play-count">Play Count</label>
+          <input type="number" id="form-play-count" min="1" step="1">
+          <span class="hidden" id="play-count-error"></span>
         </div>
         <div class="form-actions">
           <button type="button" id="cancel-btn" class="btn">Cancel</button>

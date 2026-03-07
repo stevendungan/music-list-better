@@ -2,6 +2,7 @@ import {
   Favorite,
   getFavorites,
   getFavoritesRecent,
+  getFavoritesMostPlayed,
   getMaxRank,
   addFavorite,
   updateFavorite,
@@ -15,6 +16,7 @@ const addBtn = document.getElementById('add-btn') as HTMLButtonElement
 const exportBtn = document.getElementById('export-btn') as HTMLButtonElement
 const viewRankBtn = document.getElementById('view-rank') as HTMLButtonElement
 const viewRecentBtn = document.getElementById('view-recent') as HTMLButtonElement
+const viewMostPlayedBtn = document.getElementById('view-most-played') as HTMLButtonElement
 
 const modal = document.getElementById('modal') as HTMLDivElement
 const modalTitle = document.getElementById('modal-title') as HTMLHeadingElement
@@ -28,6 +30,8 @@ const formArtist = document.getElementById('form-artist') as HTMLInputElement
 const formYear = document.getElementById('form-year') as HTMLInputElement
 const yearError = document.getElementById('year-error') as HTMLSpanElement
 const formLastPlayed = document.getElementById('form-last-played') as HTMLInputElement
+const formPlayCount = document.getElementById('form-play-count') as HTMLInputElement
+const playCountError = document.getElementById('play-count-error') as HTMLSpanElement
 
 const deleteModal = document.getElementById('delete-modal') as HTMLDivElement
 const deleteMessage = document.getElementById('delete-message') as HTMLParagraphElement
@@ -35,9 +39,10 @@ const deleteCancelBtn = document.getElementById('delete-cancel') as HTMLButtonEl
 const deleteConfirmBtn = document.getElementById('delete-confirm') as HTMLButtonElement
 
 // State
-let currentView: 'rank' | 'recent' = 'rank'
+let currentView: 'rank' | 'recent' | 'most-played' = 'rank'
 let deleteTargetId: number | null = null
 let draggedRow: HTMLTableRowElement | null = null
+let editOriginalPlayCount: number | null = null
 
 // Format date for display
 function formatDate(dateStr: string | null): string {
@@ -57,6 +62,7 @@ function renderFavorites(favorites: Favorite[]): void {
       <td>${escapeHtml(f.artist)}</td>
       <td>${f.year}</td>
       <td>${formatDate(f.last_played)}</td>
+      <td>${f.play_count}</td>
       <td class="actions">
         <button class="btn btn-small played-btn" data-id="${f.id}">Played</button>
         <button class="btn btn-small edit-btn" data-id="${f.id}">Edit</button>
@@ -73,12 +79,16 @@ function escapeHtml(str: string): string {
   return div.innerHTML
 }
 
+function fetchFavorites(): Promise<Favorite[]> {
+  if (currentView === 'most-played') return getFavoritesMostPlayed()
+  if (currentView === 'recent') return getFavoritesRecent()
+  return getFavorites()
+}
+
 // Load and render favorites
 async function loadFavorites(): Promise<void> {
   try {
-    const favorites = currentView === 'rank'
-      ? await getFavorites()
-      : await getFavoritesRecent()
+    const favorites = await fetchFavorites()
     console.log('Loaded favorites:', favorites.length)
     renderFavorites(favorites)
   } catch (error) {
@@ -94,6 +104,8 @@ async function openAddModal(): Promise<void> {
   formArtist.value = ''
   formYear.value = ''
   formLastPlayed.value = ''
+  formPlayCount.value = '1'
+  editOriginalPlayCount = null
 
   // Suggest next rank
   const maxRank = await getMaxRank()
@@ -112,6 +124,8 @@ function openEditModal(favorite: Favorite): void {
   formArtist.value = favorite.artist
   formYear.value = String(favorite.year)
   formLastPlayed.value = favorite.last_played ?? ''
+  formPlayCount.value = String(favorite.play_count)
+  editOriginalPlayCount = favorite.play_count
 
   modal.classList.remove('hidden')
   formTitle.focus()
@@ -122,6 +136,8 @@ function closeModal(): void {
   modal.classList.add('hidden')
   albumForm.reset()
   clearYearError()
+  clearPlayCountError()
+  editOriginalPlayCount = null
 }
 
 // Year validation
@@ -151,18 +167,82 @@ function clearYearError(): void {
   formYear.classList.remove('invalid')
 }
 
+// Play count validation
+function validatePlayCount(): boolean {
+  const value = formPlayCount.value.trim()
+  const prev = editOriginalPlayCount
+  const prevLabel = prev !== null ? `Previous value: ${prev}.` : 'Suggested value: 1.'
+
+  if (!value) {
+    showPlayCountError(`Play count is required. ${prevLabel}`)
+    return false
+  }
+
+  const num = Number(value)
+  if (!Number.isInteger(num) || num < 1) {
+    showPlayCountError(`Play count must be a whole number of at least 1. ${prevLabel}`)
+    return false
+  }
+
+  clearPlayCountError()
+  return true
+}
+
+function checkPlayCountWarnings(): void {
+  const value = formPlayCount.value.trim()
+  if (!value) return
+  const num = Number(value)
+  if (!Number.isInteger(num) || num < 1) return
+
+  const prev = editOriginalPlayCount
+  if (prev !== null) {
+    if (num < prev) {
+      showPlayCountWarning(`This is lower than the current value (${prev}).`)
+      return
+    }
+    if (num > prev + 5) {
+      showPlayCountWarning(`This is more than 5 above the current value (${prev}).`)
+      return
+    }
+  }
+
+  clearPlayCountError()
+}
+
+function showPlayCountError(message: string): void {
+  playCountError.textContent = message
+  playCountError.classList.remove('hidden', 'form-warning')
+  playCountError.classList.add('form-error')
+  formPlayCount.classList.add('invalid')
+}
+
+function showPlayCountWarning(message: string): void {
+  playCountError.textContent = message
+  playCountError.classList.remove('hidden', 'form-error')
+  playCountError.classList.add('form-warning')
+  formPlayCount.classList.remove('invalid')
+}
+
+function clearPlayCountError(): void {
+  playCountError.classList.add('hidden')
+  playCountError.classList.remove('form-warning')
+  formPlayCount.classList.remove('invalid')
+}
+
 // Handle form submit
 async function handleFormSubmit(e: Event): Promise<void> {
   e.preventDefault()
 
   if (!validateYear()) return
+  if (!validatePlayCount()) return
 
   const data = {
     rank: parseInt(formRank.value),
     title: formTitle.value.trim(),
     artist: formArtist.value.trim(),
     year: parseInt(formYear.value),
-    last_played: formLastPlayed.value || undefined
+    last_played: formLastPlayed.value || undefined,
+    play_count: parseInt(formPlayCount.value)
   }
 
   const id = formId.value
@@ -207,10 +287,7 @@ async function handleTableClick(e: Event): Promise<void> {
   const id = parseInt(target.dataset.id ?? '')
   if (!id) return
 
-  // Find the favorite in the current data
-  const favorites = currentView === 'rank'
-    ? await getFavorites()
-    : await getFavoritesRecent()
+  const favorites = await fetchFavorites()
   const favorite = favorites.find(f => f.id === id)
   if (!favorite) return
 
@@ -225,21 +302,20 @@ async function handleTableClick(e: Event): Promise<void> {
 }
 
 // Switch view
-function setView(view: 'rank' | 'recent'): void {
+function setView(view: 'rank' | 'recent' | 'most-played'): void {
   currentView = view
   viewRankBtn.classList.toggle('active', view === 'rank')
   viewRecentBtn.classList.toggle('active', view === 'recent')
+  viewMostPlayedBtn.classList.toggle('active', view === 'most-played')
   loadFavorites()
 }
 
 // Export to CSV
 async function exportToCsv(): Promise<void> {
-  const favorites = currentView === 'rank'
-    ? await getFavorites()
-    : await getFavoritesRecent()
+  const favorites = await fetchFavorites()
 
   // CSV header
-  const headers = ['Rank', 'Album', 'Artist', 'Year', 'Last Played']
+  const headers = ['Rank', 'Album', 'Artist', 'Year', 'Last Played', 'Plays']
 
   // Escape CSV field (handle commas and quotes)
   const escapeField = (value: string | number | null): string => {
@@ -257,7 +333,8 @@ async function exportToCsv(): Promise<void> {
     escapeField(f.title),
     escapeField(f.artist),
     f.year,
-    f.last_played ?? ''
+    f.last_played ?? '',
+    f.play_count
   ].join(','))
 
   const csvContent = [headers.join(','), ...rows].join('\n')
@@ -353,12 +430,14 @@ favoritesBody.addEventListener('dragover', handleDragOver)
 favoritesBody.addEventListener('dragend', handleDragEnd)
 favoritesBody.addEventListener('drop', handleDrop)
 formYear.addEventListener('input', clearYearError)
+formPlayCount.addEventListener('input', checkPlayCountWarnings)
 formYear.addEventListener('invalid', (e) => {
   e.preventDefault()
   showYearError('Please enter a valid 4-digit year')
 })
 viewRankBtn.addEventListener('click', () => setView('rank'))
 viewRecentBtn.addEventListener('click', () => setView('recent'))
+viewMostPlayedBtn.addEventListener('click', () => setView('most-played'))
 deleteCancelBtn.addEventListener('click', closeDeleteModal)
 deleteConfirmBtn.addEventListener('click', confirmDelete)
 
