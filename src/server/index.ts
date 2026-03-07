@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import {
   getAllFavorites,
   getFavoritesByRecent,
+  getFavoritesByMostPlayed,
   getFavoriteById,
   addFavorite,
   updateFavorite,
@@ -29,6 +30,12 @@ app.get('/api/favorites/recent', (c) => {
   return c.json(favorites)
 })
 
+// GET /api/favorites/most-played - List favorites sorted by play_count desc
+app.get('/api/favorites/most-played', (c) => {
+  const favorites = getFavoritesByMostPlayed()
+  return c.json(favorites)
+})
+
 // GET /api/favorites/max-rank - Get the current max rank
 app.get('/api/favorites/max-rank', (c) => {
   const maxRank = getMaxRank()
@@ -48,7 +55,7 @@ app.get('/api/favorites/:id', (c) => {
 // POST /api/favorites - Add a new favorite
 app.post('/api/favorites', async (c) => {
   const body = await c.req.json()
-  const { rank, title, artist, year, last_played } = body
+  const { rank, title, artist, year, last_played, play_count } = body
 
   if (!rank || !title || !artist || year === undefined || year === null) {
     return c.json({ error: 'rank, title, artist, and year are required' }, 400)
@@ -58,7 +65,11 @@ app.post('/api/favorites', async (c) => {
     return c.json({ error: 'year must be a 4-digit integer' }, 400)
   }
 
-  const favorite = addFavorite({ rank, title, artist, year, last_played })
+  if (play_count !== undefined && (!Number.isInteger(play_count) || play_count < 1)) {
+    return c.json({ error: 'play_count must be an integer of at least 1' }, 400)
+  }
+
+  const favorite = addFavorite({ rank, title, artist, year, last_played, play_count })
   return c.json(favorite, 201)
 })
 
@@ -71,6 +82,10 @@ app.put('/api/favorites/:id', async (c) => {
     if (!Number.isInteger(body.year) || body.year < 1000 || body.year > 9999) {
       return c.json({ error: 'year must be a 4-digit integer' }, 400)
     }
+  }
+
+  if (body.play_count !== undefined && (!Number.isInteger(body.play_count) || body.play_count < 1)) {
+    return c.json({ error: 'play_count must be an integer of at least 1' }, 400)
   }
 
   const favorite = updateFavorite(id, body)

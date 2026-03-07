@@ -18,9 +18,17 @@ db.exec(`
     title TEXT NOT NULL,
     artist TEXT NOT NULL,
     year INTEGER NOT NULL,
-    last_played TEXT
+    last_played TEXT,
+    play_count INTEGER NOT NULL DEFAULT 1
   )
 `)
+
+// Migration: add play_count to existing databases that lack it
+try {
+  db.exec('ALTER TABLE favorites ADD COLUMN play_count INTEGER NOT NULL DEFAULT 1')
+} catch {
+  // Column already exists
+}
 
 export interface Favorite {
   id: number
@@ -29,6 +37,7 @@ export interface Favorite {
   artist: string
   year: number
   last_played: string | null
+  play_count: number
 }
 
 export function getAllFavorites(): Favorite[] {
@@ -42,21 +51,26 @@ export function getFavoritesByRecent(): Favorite[] {
   `).all() as Favorite[]
 }
 
+export function getFavoritesByMostPlayed(): Favorite[] {
+  return db.prepare(`
+    SELECT * FROM favorites
+    ORDER BY play_count DESC, last_played DESC NULLS LAST, rank
+  `).all() as Favorite[]
+}
+
 export function getFavoriteById(id: number): Favorite | undefined {
   return db.prepare('SELECT * FROM favorites WHERE id = ?').get(id) as Favorite | undefined
 }
 
-export function addFavorite(data: { rank: number; title: string; artist: string; year: number; last_played?: string }): Favorite {
+export function addFavorite(data: { rank: number; title: string; artist: string; year: number; last_played?: string; play_count?: number }): Favorite {
   const insertRank = data.rank
+  const playCount = data.play_count ?? 1
   const transaction = db.transaction(() => {
-    // Move rows at or above insert position to temp range (avoids UNIQUE violation during shift)
     db.prepare('UPDATE favorites SET rank = rank + ? WHERE rank >= ?').run(RANK_OFFSET, insertRank)
-    // Insert new row at desired rank
     const result = db.prepare(`
-      INSERT INTO favorites (rank, title, artist, year, last_played)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(insertRank, data.title, data.artist, data.year, data.last_played ?? null)
-    // Move temp rows back: rank 10003 -> 4, 10004 -> 5, etc. (rank - OFFSET + 1)
+      INSERT INTO favorites (rank, title, artist, year, last_played, play_count)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(insertRank, data.title, data.artist, data.year, data.last_played ?? null, playCount)
     db.prepare('UPDATE favorites SET rank = rank - ? WHERE rank > ?').run(RANK_OFFSET - 1, RANK_OFFSET)
     return result.lastInsertRowid as number
   })
@@ -64,38 +78,36 @@ export function addFavorite(data: { rank: number; title: string; artist: string;
   return getFavoriteById(lastId)!
 }
 
-export function updateFavorite(id: number, data: { rank?: number; title?: string; artist?: string; year?: number | null; last_played?: string | null }): Favorite | undefined {
+export function updateFavorite(id: number, data: { rank?: number; title?: string; artist?: string; year?: number | null; last_played?: string | null; play_count?: number }): Favorite | undefined {
   const current = getFavoriteById(id)
   if (!current) return undefined
 
-  // Handle rank change - use temp offset so bulk shift never creates duplicate ranks
+  const playCount = data.play_count !== undefined ? data.play_count : current.play_count
+
   if (data.rank !== undefined && data.rank !== current.rank) {
     const newRank = data.rank
     const transaction = db.transaction(() => {
       db.prepare('UPDATE favorites SET rank = -1 WHERE id = ?').run(id)
 
       if (newRank < current.rank) {
-        // Moving up: shift [newRank, current.rank) down by 1 via temp range
         db.prepare('UPDATE favorites SET rank = rank + ? WHERE rank >= ? AND rank < ?').run(RANK_OFFSET, newRank, current.rank)
         db.prepare(`
-          UPDATE favorites SET rank = ?, title = ?, artist = ?, year = ?, last_played = ? WHERE id = ?
-        `).run(newRank, data.title ?? current.title, data.artist ?? current.artist, data.year !== undefined ? data.year : current.year, data.last_played !== undefined ? data.last_played : current.last_played, id)
+          UPDATE favorites SET rank = ?, title = ?, artist = ?, year = ?, last_played = ?, play_count = ? WHERE id = ?
+        `).run(newRank, data.title ?? current.title, data.artist ?? current.artist, data.year !== undefined ? data.year : current.year, data.last_played !== undefined ? data.last_played : current.last_played, playCount, id)
         db.prepare('UPDATE favorites SET rank = rank - ? WHERE rank > ?').run(RANK_OFFSET - 1, RANK_OFFSET)
       } else {
-        // Moving down: shift (current.rank, newRank] up by 1 via temp range
         db.prepare('UPDATE favorites SET rank = rank + ? WHERE rank > ? AND rank <= ?').run(RANK_OFFSET, current.rank, newRank)
         db.prepare(`
-          UPDATE favorites SET rank = ?, title = ?, artist = ?, year = ?, last_played = ? WHERE id = ?
-        `).run(newRank, data.title ?? current.title, data.artist ?? current.artist, data.year !== undefined ? data.year : current.year, data.last_played !== undefined ? data.last_played : current.last_played, id)
+          UPDATE favorites SET rank = ?, title = ?, artist = ?, year = ?, last_played = ?, play_count = ? WHERE id = ?
+        `).run(newRank, data.title ?? current.title, data.artist ?? current.artist, data.year !== undefined ? data.year : current.year, data.last_played !== undefined ? data.last_played : current.last_played, playCount, id)
         db.prepare('UPDATE favorites SET rank = rank - ? WHERE rank > ?').run(RANK_OFFSET + 1, RANK_OFFSET)
       }
     })
     transaction()
   } else {
-    // No rank change, just update other fields
     db.prepare(`
       UPDATE favorites
-      SET rank = ?, title = ?, artist = ?, year = ?, last_played = ?
+      SET rank = ?, title = ?, artist = ?, year = ?, last_played = ?, play_count = ?
       WHERE id = ?
     `).run(
       data.rank ?? current.rank,
@@ -103,6 +115,7 @@ export function updateFavorite(id: number, data: { rank?: number; title?: string
       data.artist ?? current.artist,
       data.year !== undefined ? data.year : current.year,
       data.last_played !== undefined ? data.last_played : current.last_played,
+      playCount,
       id
     )
   }
@@ -125,7 +138,7 @@ export function deleteFavorite(id: number): boolean {
 export function markPlayed(id: number): Favorite | undefined {
   const now = new Date()
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  db.prepare('UPDATE favorites SET last_played = ? WHERE id = ?').run(today, id)
+  db.prepare('UPDATE favorites SET last_played = ?, play_count = play_count + 1 WHERE id = ?').run(today, id)
   return getFavoriteById(id)
 }
 
