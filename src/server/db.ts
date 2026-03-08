@@ -127,10 +127,12 @@ export function deleteFavorite(id: number): boolean {
   const current = getFavoriteById(id)
   if (!current) return false
 
-  db.prepare('DELETE FROM favorites WHERE id = ?').run(id)
-
-  // Shift ranks up for albums below the deleted one
-  db.prepare('UPDATE favorites SET rank = rank - 1 WHERE rank > ?').run(current.rank)
+  const transaction = db.transaction(() => {
+    db.prepare('DELETE FROM favorites WHERE id = ?').run(id)
+    db.prepare('UPDATE favorites SET rank = rank + ? WHERE rank > ?').run(RANK_OFFSET, current.rank)
+    db.prepare('UPDATE favorites SET rank = rank - ? WHERE rank > ?').run(RANK_OFFSET + 1, RANK_OFFSET)
+  })
+  transaction()
 
   return true
 }
