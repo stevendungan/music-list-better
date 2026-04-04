@@ -63,6 +63,13 @@ export async function deleteFavorite(id: number): Promise<void> {
   await fetch(`${API_BASE}/favorites/${id}`, { method: 'DELETE' })
 }
 
+export async function moveToEnd(id: number): Promise<Favorite> {
+  const res = await fetch(`${API_BASE}/favorites/${id}/move-to-end`, {
+    method: 'POST'
+  })
+  return res.json()
+}
+
 export async function markPlayed(id: number): Promise<Favorite> {
   const res = await fetch(`${API_BASE}/favorites/${id}/played`, {
     method: 'POST'

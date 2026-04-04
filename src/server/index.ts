@@ -10,6 +10,7 @@ import {
   updateFavorite,
   deleteFavorite,
   markPlayed,
+  moveToEnd,
   getMaxRank
 } from './db.js'
 
@@ -103,6 +104,16 @@ app.delete('/api/favorites/:id', (c) => {
     return c.json({ error: 'Not found' }, 404)
   }
   return c.json({ success: true })
+})
+
+// POST /api/favorites/:id/move-to-end - Move favorite to end of rankings
+app.post('/api/favorites/:id/move-to-end', (c) => {
+  const id = parseInt(c.req.param('id'))
+  const favorite = moveToEnd(id)
+  if (!favorite) {
+    return c.json({ error: 'Not found' }, 404)
+  }
+  return c.json(favorite)
 })
 
 // POST /api/favorites/:id/played - Mark as played today

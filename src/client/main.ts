@@ -7,6 +7,7 @@ import {
   addFavorite,
   updateFavorite,
   deleteFavorite,
+  moveToEnd,
   markPlayed
 } from './api'
 
@@ -64,9 +65,10 @@ function renderFavorites(favorites: Favorite[]): void {
       <td>${formatDate(f.last_played)}</td>
       <td>${f.play_count}</td>
       <td class="actions">
-        <button class="btn btn-small played-btn" data-id="${f.id}">Played</button>
-        <button class="btn btn-small edit-btn" data-id="${f.id}">Edit</button>
-        <button class="btn btn-small delete-btn" data-id="${f.id}">Delete</button>
+        <button class="btn btn-small played-btn" data-id="${f.id}" title="Mark as played today">Played</button>
+        <button class="btn btn-small edit-btn" data-id="${f.id}" title="Edit album details">Edit</button>
+        <button class="btn btn-small move-end-btn" data-id="${f.id}" title="Move to bottom of rankings">Bottom</button>
+        <button class="btn btn-small delete-btn" data-id="${f.id}" title="Delete this album">Delete</button>
       </td>
     </tr>
   `).join('')
@@ -295,6 +297,9 @@ async function handleTableClick(e: Event): Promise<void> {
     openEditModal(favorite)
   } else if (target.classList.contains('delete-btn')) {
     openDeleteModal(favorite)
+  } else if (target.classList.contains('move-end-btn')) {
+    await moveToEnd(id)
+    await loadFavorites()
   } else if (target.classList.contains('played-btn')) {
     await markPlayed(id)
     await loadFavorites()

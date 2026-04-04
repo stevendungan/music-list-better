@@ -144,6 +144,14 @@ export function markPlayed(id: number): Favorite | undefined {
   return getFavoriteById(id)
 }
 
+export function moveToEnd(id: number): Favorite | undefined {
+  const current = getFavoriteById(id)
+  if (!current) return undefined
+  const maxRank = getMaxRank()
+  if (current.rank === maxRank) return current
+  return updateFavorite(id, { rank: maxRank })
+}
+
 export function getMaxRank(): number {
   const result = db.prepare('SELECT MAX(rank) as maxRank FROM favorites').get() as { maxRank: number | null }
   return result.maxRank ?? 0
