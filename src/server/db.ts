@@ -44,7 +44,13 @@ export function getAllFavorites(): Favorite[] {
   return db.prepare('SELECT * FROM favorites ORDER BY rank').all() as Favorite[]
 }
 
-export function getFavoritesByRecent(): Favorite[] {
+export function getFavoritesByRecent(order: 'asc' | 'desc' = 'desc'): Favorite[] {
+  if (order === 'asc') {
+    return db.prepare(`
+      SELECT * FROM favorites
+      ORDER BY last_played ASC NULLS LAST, rank
+    `).all() as Favorite[]
+  }
   return db.prepare(`
     SELECT * FROM favorites
     ORDER BY last_played DESC NULLS LAST, rank

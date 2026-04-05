@@ -15,8 +15,8 @@ export async function getFavorites(): Promise<Favorite[]> {
   return res.json()
 }
 
-export async function getFavoritesRecent(): Promise<Favorite[]> {
-  const res = await fetch(`${API_BASE}/favorites/recent`)
+export async function getFavoritesRecent(order: 'asc' | 'desc' = 'desc'): Promise<Favorite[]> {
+  const res = await fetch(`${API_BASE}/favorites/recent?order=${order}`)
   return res.json()
 }
 

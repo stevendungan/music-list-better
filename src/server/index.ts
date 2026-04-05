@@ -27,7 +27,8 @@ app.get('/api/favorites', (c) => {
 
 // GET /api/favorites/recent - List favorites sorted by last_played
 app.get('/api/favorites/recent', (c) => {
-  const favorites = getFavoritesByRecent()
+  const order = c.req.query('order') === 'asc' ? 'asc' : 'desc'
+  const favorites = getFavoritesByRecent(order)
   return c.json(favorites)
 })
 

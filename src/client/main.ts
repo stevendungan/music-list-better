@@ -43,6 +43,7 @@ const deleteConfirmBtn = document.getElementById('delete-confirm') as HTMLButton
 let currentView: 'rank' | 'recent' | 'most-played' = 'rank'
 let deleteTargetId: number | null = null
 let draggedRow: HTMLTableRowElement | null = null
+let recentOrder: 'asc' | 'desc' = 'desc'
 let editOriginalPlayCount: number | null = null
 
 // Format date for display
@@ -83,7 +84,7 @@ function escapeHtml(str: string): string {
 
 function fetchFavorites(): Promise<Favorite[]> {
   if (currentView === 'most-played') return getFavoritesMostPlayed()
-  if (currentView === 'recent') return getFavoritesRecent()
+  if (currentView === 'recent') return getFavoritesRecent(recentOrder)
   return getFavorites()
 }
 
@@ -306,12 +307,22 @@ async function handleTableClick(e: Event): Promise<void> {
   }
 }
 
+// Update the recent button label to reflect sort order
+function updateRecentLabel(): void {
+  const arrow = recentOrder === 'desc' ? '\u25BC' : '\u25B2'
+  viewRecentBtn.textContent = `By Last Played ${arrow}`
+}
+
 // Switch view
 function setView(view: 'rank' | 'recent' | 'most-played'): void {
+  if (view === 'recent' && currentView === 'recent') {
+    recentOrder = recentOrder === 'desc' ? 'asc' : 'desc'
+  }
   currentView = view
   viewRankBtn.classList.toggle('active', view === 'rank')
   viewRecentBtn.classList.toggle('active', view === 'recent')
   viewMostPlayedBtn.classList.toggle('active', view === 'most-played')
+  updateRecentLabel()
   loadFavorites()
 }
 
@@ -460,4 +471,5 @@ deleteModal.addEventListener('click', (e) => {
 })
 
 // Initial load
+updateRecentLabel()
 loadFavorites()
